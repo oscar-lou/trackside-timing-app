@@ -33,8 +33,13 @@
       addLog(`Loaded ${cars.length} cars`);
     })();
 
-    const interval = setInterval(() => (tick = performance.now()), 1000);
-    return () => clearInterval(interval);
+    let rafId: number;
+    function frame() {
+      tick = performance.now();
+      rafId = requestAnimationFrame(frame);
+    }
+    rafId = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(rafId);
   });
 
   async function startSession() {
@@ -135,9 +140,7 @@
             </button>
             <span class="text-xs" style="color: #6b7280;">
               {#if lastValidLap}
-                {#key tick}
-                  {elapsedSince(lastValidLap.perfTimestamp)} ago
-                {/key}
+                {elapsedSince(lastValidLap.perfTimestamp, tick)} ago
               {:else}
                 no laps
               {/if}
