@@ -5,6 +5,7 @@
   import { createSession, recordTap, undoLastTap, elapsedSince, formatLapTime, resetCarTiming } from '$lib/timing';
   import { requestPersistence } from '$lib/storage';
   import { acquireWakeLock } from '$lib/wakelock';
+  import { exportSessionCsv } from '$lib/export';
   import type { Car, Lap, Session } from '$lib/types';
 
   const COLOR_PALETTE = [
@@ -22,6 +23,7 @@
   let newCarNumber = $state('');
   let confirmEnd = $state(false);
   let confirmEndTimer: ReturnType<typeof setTimeout> | null = null;
+  let exporting = $state(false);
 
   // ── Derived ────────────────────────────────────────────────────────────
   let pinnedCars = $derived(cars.filter((c) => c.isPinned));
@@ -123,6 +125,16 @@
     await undoLastTap();
   }
 
+  async function exportCsv() {
+    if (!session || exporting) return;
+    exporting = true;
+    try {
+      await exportSessionCsv(session);
+    } finally {
+      exporting = false;
+    }
+  }
+
   async function resetCar(carId: string) {
     if (!session) return;
     await resetCarTiming(session.id, carId);
@@ -185,6 +197,14 @@
         MTCS · {new Date(session.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       </span>
       <div class="flex gap-2">
+        <button
+          onclick={exportCsv}
+          disabled={exporting}
+          class="px-3 py-2 rounded-lg font-bold text-sm"
+          style="background: #1f1f1f; color: {exporting ? '#4b5563' : '#22c55e'}; touch-action: manipulation;"
+        >
+          {exporting ? '…' : 'CSV ↓'}
+        </button>
         <button
           onclick={undo}
           disabled={!undoAvailable}
